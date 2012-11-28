@@ -13,6 +13,7 @@ main(int argc, char *argv[]) 	// invoked by exec("login /dev/ttyxx")
 	char *line, *username, *psswrd, *tmp; 
 	int fd, nlength, plength, stdin, stdout, stderr; 
 	int good = 0; // good = 1 if password is valid 
+	int uid, gid; 
 
 	tty = argv[1]; 
 
@@ -74,23 +75,26 @@ main(int argc, char *argv[]) 	// invoked by exec("login /dev/ttyxx")
 
     	if(good)
     	{
-    		tmp = strtok(temp_line, ":"); 	
-    		printf("tmp= %s\n", tmp); 
-    		tmp = strtok(0, ":"); 	
-    		printf("tmp= %s\n", tmp);
-    		tmp = strtok(0, ":"); 	
-    		printf("tmp= %s\n", tmp);
-    		tmp = strtok(0, ":"); 	// tmp = uid
-    		printf("Got it! uid is %s\n", tmp); 
-    		chuid(((int)tmp)-'0',1); 	// Convert temp from char to int and set uid
+    		tmp = strtok(temp_line, ":"); 		// tmp = username 
+    		printf("username= %s\n", tmp); 
+    		tmp = strtok(0, ":"); 				// tmp = password
+    		printf("password= %s\n", tmp);		
+    		tmp = strtok(0, ":"); 				// tmp = gid 
+    		gid = ((int)tmp) - '0'; 
+    		printf("gid= %d\n", gid);
+    		tmp = strtok(0, ":"); 				// tmp = uid
+    		uid = ((int)tmp) - '0'; 
+    		printf("uid= %d\n", uid); 
+    		chuid(uid, gid); 	/* Set uid and gid */ 
 
-    		tmp = strtok(0, ":"); 	// tmp = uid
-    		tmp = strtok(0, ":"); 	// tmp = uid
-    		printf("Where should I start!? Oh, HOME directory is %s\n", tmp); 
-    		chdir(tmp); 		// cd to HOME directory
+    		tmp = strtok(0, ":"); 				// tmp = fullname
+    		printf("fullname= %s\n", tmp); 
+    		tmp = strtok(0, ":"); 				// tmp = HOMEDIR
+    		printf("HOME= %s\n", tmp); 
+    		chdir(tmp); 		/* cd to HOME directory */ 
 
-    		tmp = strtok(0, ":"); 	// tmp = uid
-    		exec(tmp); 	// Tell where to execute the program
+    		tmp = strtok(0, ":"); 				// tmp = uid
+    		exec(tmp); 			/* execute programs in user's space */ 
     	}
     	else
     	{
