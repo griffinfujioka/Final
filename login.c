@@ -13,7 +13,7 @@ main(int argc, char *argv[]) 	// invoked by exec("login /dev/ttyxx")
 	char *line, *username, *psswrd, *tmp; 
 	int fd, nlength, plength, stdin, stdout, stderr; 
 	int good = 0; // good = 1 if password is valid 
-	int uid, gid; 
+	int uid = 0, gid = 0; 
 
 	tty = argv[1]; 
 
@@ -79,13 +79,13 @@ main(int argc, char *argv[]) 	// invoked by exec("login /dev/ttyxx")
     		printf("username= %s\n", tmp); 
     		tmp = strtok(0, ":"); 				// tmp = password
     		printf("password= %s\n", tmp);		
-    		tmp = strtok(0, ":"); 				// tmp = gid 
+    		tmp = strtok(0, ":"); 				//  tmp = gid 
     		gid = ((int)tmp) - '0'; 
-    		printf("gid= %d\n", gid);
+    		printf("gid= %d\n", gid);           // This value is garbage 
     		tmp = strtok(0, ":"); 				// tmp = uid
-    		uid = ((int)tmp) - '0'; 
+    		uid = ((int)tmp) - '0';             // This value is garbage
     		printf("uid= %d\n", uid); 
-    		chuid(uid, gid); 	/* Set uid and gid */ 
+    		chuid(0, 0); 	/* Set uid and gid - hardcoded hack*/ 
 
     		tmp = strtok(0, ":"); 				// tmp = fullname
     		printf("fullname= %s\n", tmp); 
