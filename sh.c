@@ -1,7 +1,7 @@
 #include "ucode.c"
 
 char line[64], buf[128]; 
-char *name;
+char *name[10]; 	// Holds 10 paramaters from command line input 
 
 Menu()
 {
@@ -103,32 +103,39 @@ main(int argc, char* argv)
 		if(line[0] == 0)
 			continue; 
 
-		strcpy(tmp, line); 
+		strcpy(tmp, line);  // Copy user input into tmp 
+		//printf("line = %s\n", line); 
 		i = 0; 
-		name[i] = strtok(tmp, " \n"); 
+		name[i] = strtok(tmp, " \n");  	// name[0] = command 
 		while(i < 9)
 		{
 			i++; 
-			name[i] = strtok(0, " \n"); 
+			name[i] = strtok(0, " \n"); // name[1-9] = parameters 
+			//printf("name[%d] = %s\n", i, name[i] ? name[i] : ""); 
 		}
 
+		//printf("1\n"); 
 		if(strcmp(name[0], "help") == 0)
 		{
 			Menu(); 
 			continue; 
 		}
 
-		if(strcmp(name[0], "logout"))
+		//printf("2\n"); 
+		if(strcmp(name[0], "logout") == 0)
 		{
 			exit(0); 
 		}
 
+		//printf("3\n"); 
 		if(strcmp(name[0], "cd") == 0)
 		{
+			//printf("4\n"); 
 			chdir(name[1]); 
 		}
 		else if(strcmp(name[0], "pwd") == 0)
 		{
+			//printf("5\n"); 
 			getcwd(tmp); 
 			printf("%s\n", tmp); 
 		}
@@ -139,6 +146,7 @@ main(int argc, char* argv)
 			{
 				printf("parent sh waits for child to die\n"); 
 				pid = wait(&status); 	
+				printf("pid = %d\n"); 
 			}
 			else 
 				multiple(i-1); 

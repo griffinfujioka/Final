@@ -5,6 +5,10 @@ main(int argc, char* argv[])
 	int fd1, fd2, n; 
 	char buf[1024]; 
 
+	printf("****************************************\n"); 
+	printf("     Griffin's cp in action\n"); 
+	printf("****************************************\n");
+
 	if(argc < 3)
 	{
 		printf("[USAGE]: cp source destination\n"); 

@@ -9,6 +9,7 @@ main(int argc, char* argv[])
 	printf("****************************************\n"); 
 	printf("     Griffin's grep in action\n"); 
 	printf("****************************************\n");
+	
 	if(argc > 2)
 		fd = open(argv[2], 0); 	// Open the file for READ
 	else

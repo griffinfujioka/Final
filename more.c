@@ -6,6 +6,10 @@ main(int argc, char* argv[])
 	int fd = 0; 
 	int linenumber = 0, c = 0, n; 
 
+	printf("****************************************\n"); 
+	printf("     Griffin's more in action\n"); 
+	printf("****************************************\n");
+
 	if(argc > 1)
 	{
 		fd = open(argv[1], 0);  	// Open file for read 

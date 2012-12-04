@@ -7,6 +7,10 @@ main(int argc, char* argv[])
 	char buf[1024];
 	char *tmp, *input; 
 
+	printf("****************************************\n"); 
+	printf("     Griffin's cat in action\n"); 
+	printf("****************************************\n");
+
 	if(argc > 1)
 	{
 		fd = open(argv[1], 0); 	// Open file for READ
