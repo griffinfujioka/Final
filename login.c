@@ -67,7 +67,7 @@ main(int argc, char *argv[]) 	// invoked by exec("login /dev/ttyxx")
     			else
     			{
     				printf("Invalid password.\n"); 
-    				break; 	// Invalid password. 
+    				break; 	 
     			}
     		}
     		line = strtok(0, "\n"); 		// Read the next line of the file 
