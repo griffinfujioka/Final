@@ -14,8 +14,9 @@ int stdin, stdout, stderr;
 
 main(int argc, char *argv[])
 {
+
   // 1. open /dev/tty0 as 0 (READ) and 1 (WRITE) in order to display messages
-  /*stdin  = open("/dev/tty0", 0);
+  stdin  = open("/dev/tty0", 0);
   stdout = open("/dev/tty0", 1);
   stderr = open("/dev/tty0", 1);  
 
@@ -25,19 +26,13 @@ main(int argc, char *argv[])
   
   if (child)
     parent();
-  else  // fork login task in console 
-    login();
-  */ 
-  stdin = open("/dev/ttyS0", 0); 
-  stdout = open("/dev/ttyS0", 1); 
-  stderr = open("/dev/ttyS0", 1); 
-  printf("GRIFFIN-init: fork a login task in serial port 0\n"); 
-  s0 = fork(); 
-
-  if(s0)
-    parent0(); 
-  else
-    loginS0(); 
+  else  // fork a couple of login task 
+  {
+    login();    // fork a login task in the console 
+    loginS0();  // fork a login task in serial port 0 
+  }
+    
+  
   
 }       
 
@@ -48,7 +43,16 @@ int login()
 
 int loginS0() // Run the login program in serial port 0 
 {
-  exec("login /dev/ttyS0"); 
+  stdin = open("/dev/ttyS0", 0); 
+  stdout = open("/dev/ttyS0", 1); 
+  stderr = open("/dev/ttyS0", 1); 
+  printf("GRIFFIN-init: fork a login task in serial port 0\n"); 
+  s0 = fork(); 
+
+  if(s0)
+    parent();
+  else
+    exec("login /dev/ttyS0"); 
 }
 
 int loginS1() // Run the login program in serial port 1
@@ -65,12 +69,13 @@ int parent()
 
     
     if (pid == child)
-      login(); 
+      loginS0(); 
     else
-        printf("INIT : buried an orphan child %d\n", pid);
+      printf("INIT : buried an orphan child %d\n", pid);
     
   }
 }
+
 
 // Things are getting pretty hacky around here... 
 int parent0()
