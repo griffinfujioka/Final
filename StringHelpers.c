@@ -13,7 +13,7 @@ int StringContains(char* str, char c)
 }
 
 // Return the number of occurences of c in str 
-int StringOccurences(char* str, char c)
+int CountOccurences(char* str, char c)
 {
 	int count = 0; 
 	while(*str)
@@ -39,7 +39,7 @@ int GetIndex(char* str, char* s)
 
 	len = strlen(str); 
 	slen = strlen(s); 
-	MaxIndex = len - sublen; 
+	MaxIndex = len - slen; 
 	i = 0; 
 	while(i < MaxIndex)
 	{
@@ -54,3 +54,4 @@ int GetIndex(char* str, char* s)
 	return -1; 	// substring was not found 
 
 }
+

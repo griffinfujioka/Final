@@ -63,9 +63,9 @@ ExecRedirect(char *execFile, char * redirect, char *file_mode)
 	{
 		// Setup IO redirection so output is written to file 
 		close(1); 	//  Replace stdout with the file 
-		if(open(redir, file_mode) != 1)
+		if(open(redirect, file_mode) != 1)
 		{
-			printf("ERROR: Could not open %s for IO redirection (attempted for 0x%x).\n", redir, file_mode); 
+			printf("ERROR: Could not open %s for IO redirection (attempted for 0x%x).\n", redirect, file_mode); 
 			exit(-1); 
 		}
 		exec(execFile); 
@@ -135,7 +135,7 @@ main(int argc, char* argv)
 			continue; 
 		}
 
-		if(StringCount(line, "|") > 1)
+		if(CountOccurences(line, "|") > 1)
 		{
 			// Multiple pipes
 		}
@@ -155,6 +155,72 @@ main(int argc, char* argv)
 			}
 
 			line[i-1] = 0; 
+			ExecRedirect(line, &line[i+3], 1|0100); 	// Open file for WRITE or CREATE
+			continue; 
+		}
+		else if((i = GetIndex(line, ">")) != -1)
+		{
+			if(i == 0)
+			{
+				printf("ERROR: > cannot be the first character in a command.\n"); 
+				continue; 
+			}
+
+			pid = fork(); 
+			if(pid == 0)
+			{
+				line[i-1] = 0; 
+				printf("Forked a process to execute %s with IO to %s.\n", line, &line[i+2]); 
+
+				// Write stdout to file 
+				close(1); 		// Replace stdout with file 
+				if((open(&line[i+2], 1|0100)) != 1)
+				{
+					printf("ERROR: Could not open %s for output redirection.\n", &line[i+2]); 
+					exit(-1); 
+				}
+
+				exec(line); 
+				continue; 
+			}
+			else
+			{
+				// Wait for child to die 
+				wait(&status); 
+				continue; 
+			}
+		}
+		else if((i = GetIndex(line, "<")) != -1)
+		{
+			if(i == 0)
+			{
+				printf("ERROR: < cannot be the first character in a command.\n"); 
+				continue; 
+			}
+
+			pid = fork(); 
+			if(pid == 0)
+			{
+				line[i-1] = 0; 
+				printf("Forked a process to execute %s with IO to %s.\n", line, &line[i+2]); 
+
+				// Read from file as stdin 
+				close(0); 
+				if(open(&line[i+2] , 0) != 0)
+				{
+					printf("ERROR: Could not open %s to read as input.\n", &line[i+2]); 
+					exit(-1); 
+				}
+
+				exec(line); 
+				continue; 
+			}
+			else
+			{
+				// Wait for child to die 
+				wait(&status); 
+				continue; 
+			}
 		}
 
 
