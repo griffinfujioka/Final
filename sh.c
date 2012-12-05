@@ -2,16 +2,18 @@
 #include "StringHelpers.c"
 
 char line[64], buf[128]; 
-char *name[10]; 	// Holds 10 paramaters from command line input 
+char *name[10]; 	// Hold 10 arguments from command line input delimited by ' '
 
 Menu()
 {
-	printf("**************** menu ****************\n"); 
-	printf("ls   cd   pwd   cat   more   \n"); 
-	printf("cp   mv   >      >>   mkdir\n"); 
-	printf("rmdir     creat  rm   chmod\n"); 
-	printf("<    |    help\n"); 
-	printf("**************************************\n"); 
+	printf("****************************************\n");
+	printf("               MENU                     \n"); 
+	printf("****************************************\n"); 
+	printf("* ls     cd     pwd     cat     more   *\n"); 
+	printf("* cp     mv     >        >>     mkdir  *\n"); 
+	printf("* rmdir         creat    rm     chmod  *\n"); 
+	printf("* <      |      help                   *\n"); 
+	printf("****************************************\n"); 
 }
 
 PipeRedirect(char *cmd1, char *cmd2)
@@ -79,14 +81,14 @@ ExecRedirect(char *execFile, char * redirect, char *file_mode)
 
 main(int argc, char* argv)
 {
-	int stdin, stdout, stderr; 
+	//int stdin, stdout, stderr; 
 	int i, j, pid, cid, me, status; 
 	char tmp[64]; 
 
 	me = getpid(); 
 	while(1)
 	{
-		printf("GPF-SH: "); 
+		printf("gpf-shell:~$ "); 
 		gets(line); 	// Read a line into line[] buffer
 		if(line[0] == 0)
 			continue; 
@@ -100,7 +102,6 @@ main(int argc, char* argv)
 		{
 			i++; 
 			name[i] = strtok(0, " \n"); // name[1-9] = parameters 
-			//printf("name[%d] = %s\n", i, name[i] ? name[i] : ""); 
 		}
 
 		// Handle special cases first: help, logout, cd and pwd 
@@ -138,29 +139,31 @@ main(int argc, char* argv)
 		if(CountOccurences(line, "|") > 1)
 		{
 			// Multiple pipes
-		}
-
-		if((i = GetIndex(line, "|") != -1))
-		{
-			line[i-1] = 0; 
-			PipeRedirect(line, &line[i+2]); 
+			printf("ERROR: Support for multiple pipes is not included in this build.\n"); 
 			continue; 
 		}
-		else if((i = GetIndex(line, ">>")) != -1)
+
+		if((j = GetIndex(line, "|") != -1))
 		{
-			if(i == 0)
+			line[j-1] = 0; 
+			PipeRedirect(line, &line[j+2]); 
+			continue; 
+		}
+		else if((j = GetIndex(line, ">>")) != -1)
+		{
+			if(j == 0)
 			{
 				printf("ERROR: >> cannot be the first character in a command.\n"); 
 				continue; 
 			}
 
-			line[i-1] = 0; 
-			ExecRedirect(line, &line[i+3], 1|0100); 	// Open file for WRITE or CREATE
+			line[j-1] = 0; 
+			ExecRedirect(line, &line[j+3], 1|0100); 	// Open file for WRITE or CREATE
 			continue; 
 		}
-		else if((i = GetIndex(line, ">")) != -1)
+		else if((j = GetIndex(line, ">")) != -1)
 		{
-			if(i == 0)
+			if(j == 0)
 			{
 				printf("ERROR: > cannot be the first character in a command.\n"); 
 				continue; 
@@ -169,14 +172,14 @@ main(int argc, char* argv)
 			pid = fork(); 
 			if(pid == 0)
 			{
-				line[i-1] = 0; 
-				printf("Forked a process to execute %s with IO to %s.\n", line, &line[i+2]); 
+				line[j-1] = 0; 
+				printf("Forked a process to execute %s with IO to %s.\n", line, &line[j+2]); 
 
 				// Write stdout to file 
 				close(1); 		// Replace stdout with file 
-				if((open(&line[i+2], 1|0100)) != 1)
+				if((open(&line[j+2], 1|0100)) != 1)
 				{
-					printf("ERROR: Could not open %s for output redirection.\n", &line[i+2]); 
+					printf("ERROR: Could not open %s for output redirection.\n", &line[j+2]); 
 					exit(-1); 
 				}
 
@@ -190,9 +193,9 @@ main(int argc, char* argv)
 				continue; 
 			}
 		}
-		else if((i = GetIndex(line, "<")) != -1)
+		else if((j = GetIndex(line, "<")) != -1)
 		{
-			if(i == 0)
+			if(j == 0)
 			{
 				printf("ERROR: < cannot be the first character in a command.\n"); 
 				continue; 
@@ -201,14 +204,14 @@ main(int argc, char* argv)
 			pid = fork(); 
 			if(pid == 0)
 			{
-				line[i-1] = 0; 
-				printf("Forked a process to execute %s with IO to %s.\n", line, &line[i+2]); 
+				line[j-1] = 0; 
+				printf("Forked a process to execute %s with IO to %s.\n", line, &line[j+2]); 
 
 				// Read from file as stdin 
 				close(0); 
-				if(open(&line[i+2] , 0) != 0)
+				if(open(&line[j+2] , 0) != 0)
 				{
-					printf("ERROR: Could not open %s to read as input.\n", &line[i+2]); 
+					printf("ERROR: Could not open %s to read as input.\n", &line[j+2]); 
 					exit(-1); 
 				}
 
