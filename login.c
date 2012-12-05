@@ -4,6 +4,8 @@ login program
 #include "ucode.c"
 char *tty;
 
+
+
 main(int argc, char *argv[]) 	// invoked by exec("login /dev/ttyxx")
 {
 	char buff[1024]; 
@@ -21,11 +23,13 @@ main(int argc, char *argv[]) 	// invoked by exec("login /dev/ttyxx")
 	close(0); close(1); close(2); 
 
 	// 1. open /dev/tty0 as 0 (READ) and 1 (WRITE) in order to display messages
-	stdin  = open("/dev/tty0", 0);
-  	stdout = open("/dev/tty0", 1);
-  	stderr = open("/dev/tty0", 1); 
+	stdin  = open(tty, 0);
+  	stdout = open(tty, 1);
+  	stderr = open(tty, 1); 
 
+    // determine where to run the login task
   	//settty(tty); 	// store tty string in PROC.tty[] for putc()
+
 
   	printf("GF-LOGIN : open %s as stdin, stdout, stderr\n", tty); 
 
@@ -80,12 +84,12 @@ main(int argc, char *argv[]) 	// invoked by exec("login /dev/ttyxx")
     		tmp = strtok(0, ":"); 				// tmp = password
     		printf("password= %s\n", tmp);		
     		tmp = strtok(0, ":"); 				//  tmp = gid 
-    		gid = ((int)tmp) - '0'; 
+    		gid = atoi(tmp); 
     		printf("gid= %d\n", gid);           // This value is garbage 
     		tmp = strtok(0, ":"); 				// tmp = uid
-    		uid = ((int)tmp) - '0';             // This value is garbage
+    		uid = atoi(tmp);                     // This value is garbage
     		printf("uid= %d\n", uid); 
-    		chuid(0, 0); 	/* Set uid and gid - hardcoded hack*/ 
+    		chuid(uid, gid); 	/* Set uid and gid - hardcoded hack*/ 
 
     		tmp = strtok(0, ":"); 				// tmp = fullname
     		printf("fullname= %s\n", tmp); 

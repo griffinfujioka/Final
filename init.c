@@ -5,8 +5,9 @@
 // and /dev/ttyS1.. 
 //************************************************************************
 
-int pid, child, status;
-int stdin, stdout;
+int pid, child, status, s0, s1;
+int s0in, s0out;  
+int stdin, stdout, stderr; 
 
 #include "ucode.c"  //<========== AS POSTED on class website
 
@@ -14,27 +15,45 @@ int stdin, stdout;
 main(int argc, char *argv[])
 {
   // 1. open /dev/tty0 as 0 (READ) and 1 (WRITE) in order to display messages
-  stdin  = open("/dev/tty0", 0);
+  /*stdin  = open("/dev/tty0", 0);
   stdout = open("/dev/tty0", 1);
-
-
-  printf("GRIFFIN-init: fork a login task on console\n"); 
+  stderr = open("/dev/tty0", 1);  
 
   // 2. Now we can use printf, which calls putc(), which writes to stdout
-  //printf("KCINIT : fork a login task on console\n"); 
+  printf("GRIFFIN-init: fork a login task in the console\n"); 
   child = fork();
-   
   
   if (child)
     parent();
-  else  // login task
+  else  // fork login task in console 
     login();
+  */ 
+  stdin = open("/dev/ttyS0", 0); 
+  stdout = open("/dev/ttyS0", 1); 
+  stderr = open("/dev/ttyS0", 1); 
+  printf("GRIFFIN-init: fork a login task in serial port 0\n"); 
+  s0 = fork(); 
+
+  if(s0)
+    parent0(); 
+  else
+    loginS0(); 
   
 }       
 
 int login()
 {
   exec("login /dev/tty0");
+}
+
+int loginS0() // Run the login program in serial port 0 
+{
+  exec("login /dev/ttyS0"); 
+}
+
+int loginS1() // Run the login program in serial port 1
+{
+  exec("login /dev/ttyS1"); 
 }
       
 int parent()
@@ -47,6 +66,23 @@ int parent()
     
     if (pid == child)
       login(); 
+    else
+        printf("INIT : buried an orphan child %d\n", pid);
+    
+  }
+}
+
+// Things are getting pretty hacky around here... 
+int parent0()
+{
+  while(1){
+    printf("KCINIT : waiting .....\n");
+
+    pid = wait(&status);
+
+    
+    if (pid == child)
+      loginS0(); 
     else
         printf("INIT : buried an orphan child %d\n", pid);
     
