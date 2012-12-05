@@ -85,11 +85,11 @@ main(int argc, char *argv[]) 	// invoked by exec("login /dev/ttyxx")
     		printf("password= %s\n", tmp);		
     		tmp = strtok(0, ":"); 				//  tmp = gid 
     		gid = atoi(tmp); 
-    		printf("gid= %d\n", gid);           // This value is garbage 
+    		printf("gid= %d\n", gid);           
     		tmp = strtok(0, ":"); 				// tmp = uid
-    		uid = atoi(tmp);                     // This value is garbage
+    		uid = atoi(tmp);                    
     		printf("uid= %d\n", uid); 
-    		chuid(uid, gid); 	/* Set uid and gid - hardcoded hack*/ 
+    		chuid(uid, gid); 	     /* Set uid and gid */ 
 
     		tmp = strtok(0, ":"); 				// tmp = fullname
     		printf("fullname= %s\n", tmp); 

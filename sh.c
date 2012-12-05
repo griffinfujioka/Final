@@ -1,91 +1,79 @@
 #include "ucode.c"
+#include "StringHelpers.c"
 
 char line[64], buf[128]; 
 char *name[10]; 	// Holds 10 paramaters from command line input 
 
 Menu()
 {
-	printf("******** menu ********\n"); 
+	printf("**************** menu ****************\n"); 
 	printf("ls   cd   pwd   cat   more   \n"); 
 	printf("cp   mv   >      >>   mkdir\n"); 
 	printf("rmdir     creat  rm   chmod\n"); 
 	printf("<    |    help\n"); 
-	printf("**********************\n"); 
+	printf("**************************************\n"); 
 }
 
-one(int begin, int end)
+PipeRedirect(char *cmd1, char *cmd2)
 {
-	int i = begin; 
-	int j = end; 
-	int found = 0; 
-
-	while(i <= j && !found)
+	int status; 
+	int pd[2]; 
+	if(0 == fork())
 	{
-		if(!strcmp(name[i], ">"))
+		pipe(pd); 	// Create the pipe
+
+		// Fork a child for reading 
+		if(fork())
 		{
-			found = 1; 
-			close(1); 	
-			open(name[i+1], 1|0100); 	// Open file for WRITE or CREATE
+			printf("child P%d closing pd[1]\n", getpid()); 
+			close(pd[1]); 
+			close(0); 	// Replace stdin with the pipe reader 
+			dup(pd[0]); 
+			exec(cmd2); 	// Execute the command 
+			printf("%s failed to execute.\n", cmd2); 
 		}
-		else if(!strcmp,name[i], ">>")
+		else 
 		{
-			found = 1; 
-			close(1); 
-			open(name[i+1], 02000|1|0100); // Open file for APPEND, WRITE or CREATE
+			printf("parent P%d closing pd[0]\n", getpid()); 
+			close(pd[0]); 
+			close(1); 	// Replace stdout with the pipe writer 
+			dup(pd[1]); 
+			exec(cmd1); 
+			printf("%s failed to execute.\n", cmd1); 
+
 		}
-		else if(!strcmp(name[i], "<"))
-		{
-			found = 1; 
-			close(0); 
-			open(name[i+1], 0); 	// Open file for READ 
-			printf("%s\n is opened for READ.\n"); 
-			getc(); 
-		}
-		i++; 
 	}
-	if(found)
-		i--; 
-
-	strcpy(buf, name[begin]); 
-	begin++; 
-
-	while(begin < i)
-	{
-		strcat(buf, " "); 
-		strcat(buf, name[begin]); 
-		begin++; 
-	}
-
-	exec(buf); 
-}
-
-multiple(int end)
-{
-	int j = end; 
-	int isPipe = 0, pid; 
-	int pipin[2]; 
-
-	while(j >= 0 && !isPipe)
-	{
-		if(!strcmp(name[j], "|"))
-			isPipe = 1; 
-
-		j--; 
-	}
-
-	if(!isPipe)
-		one(0, end); 
 	else
 	{
-		pipe(pipin); 	// Create pipe 
-		pid = fork(); 	// Fork a new process
-		if(pid)
+		// We are the shell process and must wait for child to die 
+		wait(&status); 
+	}
+
+}
+
+ExecRedirect(char *execFile, char * redirect, char *file_mode)
+{
+	int pid, status; 
+
+	printf("ExecRedirect(%s, %s, 0x%x)\n", execFile, redirect, file_mode); 
+	sleep(5); 
+
+	pid = fork();
+	if(pid == 0)
+	{
+		// Setup IO redirection so output is written to file 
+		close(1); 	//  Replace stdout with the file 
+		if(open(redir, file_mode) != 1)
 		{
-			close(pipin[1]); 
-			close(0); 
-			dup2(pipin[1], 1); 	// Dupilicate file descriptor pipin[1] to 1 
-			multiple(j); 
+			printf("ERROR: Could not open %s for IO redirection (attempted for 0x%x).\n", redir, file_mode); 
+			exit(-1); 
 		}
+		exec(execFile); 
+		printf("ERROR: exec %s failed.\n", execFile); 
+	}
+	else
+	{
+		wait(&status); 	// Wait for child to die 
 	}
 }
 
@@ -103,8 +91,9 @@ main(int argc, char* argv)
 		if(line[0] == 0)
 			continue; 
 
-		strcpy(tmp, line);  // Copy user input into tmp 
-		//printf("line = %s\n", line); 
+		strcpy(tmp, line);  // Copy user input into tmp so we can tokenize it
+		
+		// Tokenize the input line and put each word into name[0], name[1]... 
 		i = 0; 
 		name[i] = strtok(tmp, " \n");  	// name[0] = command 
 		while(i < 9)
@@ -114,24 +103,23 @@ main(int argc, char* argv)
 			//printf("name[%d] = %s\n", i, name[i] ? name[i] : ""); 
 		}
 
-		//printf("1\n"); 
+		// Handle special cases first: help, logout, cd and pwd 
 		if(strcmp(name[0], "help") == 0)
 		{
 			Menu(); 
 			continue; 
 		}
-
-		//printf("2\n"); 
-		if(strcmp(name[0], "logout") == 0)
+		else if(strcmp(name[0], "logout") == 0)
 		{
 			exit(0); 
 		}
-
-		//printf("3\n"); 
-		if(strcmp(name[0], "cd") == 0)
+		else if(strcmp(name[0], "cd") == 0)
 		{
 			//printf("4\n"); 
 			chdir(name[1]); 
+			getcwd(line); 
+			printf("cd to %s\n", line); 
+			continue; 
 		}
 		else if(strcmp(name[0], "pwd") == 0)
 		{
@@ -139,17 +127,52 @@ main(int argc, char* argv)
 			getcwd(tmp); 
 			printf("%s\n", tmp); 
 		}
-		else
+
+		// Handle IO redirection 
+		if(StringContains(line, ">") && StringContains(line, "|"))
 		{
-			pid = fork(); 
-			if(pid)
+			printf("ERROR: Pipe and redirection is not supported within the same command.\n"); 
+			continue; 
+		}
+
+		if(StringCount(line, "|") > 1)
+		{
+			// Multiple pipes
+		}
+
+		if((i = GetIndex(line, "|") != -1))
+		{
+			line[i-1] = 0; 
+			PipeRedirect(line, &line[i+2]); 
+			continue; 
+		}
+		else if((i = GetIndex(line, ">>")) != -1)
+		{
+			if(i == 0)
 			{
-				printf("parent sh waits for child to die\n"); 
-				pid = wait(&status); 	
-				printf("pid = %d\n"); 
+				printf("ERROR: >> cannot be the first character in a command.\n"); 
+				continue; 
 			}
-			else 
-				multiple(i-1); 
+
+			line[i-1] = 0; 
+		}
+
+
+
+
+
+		pid = fork(); 
+		if(pid)
+		{
+			printf("parent sh waits for child to die\n"); 
+			pid = wait(&status); 	
+			printf("pid = %d\n"); 
+		}
+		else 
+		{
+			printf("forked task %d to exec %s\n", getpid(), name[0]); 
+			exec(line); 
+			printf("exec failed.\n"); 
 		}
 	}
 }
