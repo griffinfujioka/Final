@@ -16,21 +16,24 @@ Menu()
 	printf("****************************************\n"); 
 }
 
-PipeRedirect(char *cmd1, char *cmd2)
+// Execute a pipe command 
+ExecPipe(char *cmd1, char *cmd2)
 {
-	int status; 
+	int status, pid;
 	int pd[2]; 
-	if(0 == fork())
+	if(fork() == 0)
 	{
 		pipe(pd); 	// Create the pipe
-
+		printf("pd[0] = %d, pd[1] = %d\n", pd[0], pd[1]); 
 		// Fork a child for reading 
-		if(fork())
+		pid = fork(); 
+		if(pid)
 		{
-			printf("child P%d closing pd[1]\n", getpid()); 
+			printf("P%d closing pd[1] to READ from pipe.\n", getpid()); 
 			close(pd[1]); 
 			close(0); 	// Replace stdin with the pipe reader 
 			dup(pd[0]); 
+			printf("P%d ready to READ from pipe.\n", getpid()); 
 			exec(cmd2); 	// Execute the command 
 			printf("%s failed to execute.\n", cmd2); 
 		}
@@ -40,25 +43,26 @@ PipeRedirect(char *cmd1, char *cmd2)
 			close(pd[0]); 
 			close(1); 	// Replace stdout with the pipe writer 
 			dup(pd[1]); 
-			exec(cmd1); 
+			exec(cmd1); // Execute the command 
 			printf("%s failed to execute.\n", cmd1); 
 
 		}
 	}
 	else
 	{
-		// We are the shell process and must wait for child to die 
+		// Wait for child to die 
 		wait(&status); 
 	}
 
 }
 
+// Execute a redirection command 
 ExecRedirect(char *execFile, char * redirect, char *file_mode)
 {
 	int pid, status; 
 
 	printf("ExecRedirect(%s, %s, 0x%x)\n", execFile, redirect, file_mode); 
-	sleep(5); 
+	sleep(1); // Take a nap  
 
 	pid = fork();
 	if(pid == 0)
@@ -105,6 +109,8 @@ main(int argc, char* argv)
 		}
 
 		// Handle special cases first: help, logout, cd and pwd 
+		// cd and pwd must be handeled because they are system calls and not user programs like
+		// the others we wrote for this assignment (cp, grep, cat, more, etc.)
 		if(strcmp(name[0], "help") == 0)
 		{
 			Menu(); 
@@ -116,7 +122,6 @@ main(int argc, char* argv)
 		}
 		else if(strcmp(name[0], "cd") == 0)
 		{
-			//printf("4\n"); 
 			chdir(name[1]); 
 			getcwd(line); 
 			printf("cd to %s\n", line); 
@@ -124,7 +129,6 @@ main(int argc, char* argv)
 		}
 		else if(strcmp(name[0], "pwd") == 0)
 		{
-			//printf("5\n"); 
 			getcwd(tmp); 
 			printf("%s\n", tmp); 
 		}
@@ -143,37 +147,37 @@ main(int argc, char* argv)
 			continue; 
 		}
 
-		if((j = GetIndex(line, "|") != -1))
+		if((j = GetIndex(line, "|") != -1)) 	// Pipe handling 
 		{
-			line[j-1] = 0; 
-			PipeRedirect(line, &line[j+2]); 
+			line[j-1] = 0; 		// First part of pipe (Ex. 'cat filename\0')
+			ExecPipe(line, &line[j+2]); 	// &line[j+2] = second part of pipe (Ex. 'more\0')
 			continue; 
 		}
-		else if((j = GetIndex(line, ">>")) != -1)
+		else if((j = GetIndex(line, ">>")) != -1) 	// Append handling 
 		{
 			if(j == 0)
 			{
-				printf("ERROR: >> cannot be the first character in a command.\n"); 
+				printf("[USAGE]: >> cannot be the first character in a command.\n"); 
 				continue; 
 			}
 
-			line[j-1] = 0; 
-			ExecRedirect(line, &line[j+3], 1|0100); 	// Open file for WRITE or CREATE
+			line[j-1] = 0; 	// (Ex. 'cat filename\0')
+			ExecRedirect(line, &line[j+3], 1|0100); 	// &line[j+3] = (Ex. 'appendFile\0') - Open file for WRITE or CREATE
 			continue; 
 		}
-		else if((j = GetIndex(line, ">")) != -1)
+		else if((j = GetIndex(line, ">")) != -1)  		// Write contents to new file handling 
 		{
 			if(j == 0)
 			{
-				printf("ERROR: > cannot be the first character in a command.\n"); 
+				printf("[USAGE]: > cannot be the first character in a command.\n"); 
 				continue; 
 			}
 
 			pid = fork(); 
 			if(pid == 0)
 			{
-				line[j-1] = 0; 
-				printf("Forked a process to execute %s with IO to %s.\n", line, &line[j+2]); 
+				line[j-1] = 0;  // (Ex. 'cat filename')
+				printf("Forked a process to execute %s with IO to %s.\n", line, &line[j+2]); // &line[j+2] = 'newFile\0'
 
 				// Write stdout to file 
 				close(1); 		// Replace stdout with file 
@@ -193,19 +197,19 @@ main(int argc, char* argv)
 				continue; 
 			}
 		}
-		else if((j = GetIndex(line, "<")) != -1)
+		else if((j = GetIndex(line, "<")) != -1) // Ready inputs from file 
 		{
 			if(j == 0)
 			{
-				printf("ERROR: < cannot be the first character in a command.\n"); 
+				printf("[USAGE]: < cannot be the first character in a command.\n"); 
 				continue; 
 			}
 
 			pid = fork(); 
 			if(pid == 0)
 			{
-				line[j-1] = 0; 
-				printf("Forked a process to execute %s with IO to %s.\n", line, &line[j+2]); 
+				line[j-1] = 0;  // (Ex. a.out)
+				printf("Forked a process to execute %s with IO to %s.\n", line, &line[j+2]); // &line[j+2] = 'inFile\0'
 
 				// Read from file as stdin 
 				close(0); 
@@ -228,9 +232,8 @@ main(int argc, char* argv)
 
 
 
-
-
-		pid = fork(); 
+		// Here is where we handle all other commands besides help, logout, pwd and cd 
+		pid = fork(); 	// Fork a child to exec to the command 
 		if(pid)
 		{
 			printf("parent sh waits for child to die\n"); 
