@@ -68,7 +68,6 @@ int loginS0() // Run the login program in serial port 0
 
   if(s0)
   {
-    loginS1(); 
     parent0();
   }
   else
@@ -77,16 +76,16 @@ int loginS0() // Run the login program in serial port 0
 
 int loginS1() // Run the login program in serial port 1
 {
-  stdin = open("/dev/ttyS1", 0);    // Open serial port 1 as stdin for READ  
-  stdout = open("/dev/ttyS1", 1);   // Open serial port 1 as stdout for WRITE   
-  stderr = open("/dev/ttyS1", 1);   
+  stdin = open("/dev/pts/1", 0);    // Open serial port 1 as stdin for READ  
+  stdout = open("/dev/pts/1", 1);   // Open serial port 1 as stdout for WRITE   
+  stderr = open("/dev/pts/1", 1);   
   
   s1 = fork(); 
 
   if(s1)
     parent1(); 
   else
-    exec("login /dev/ttyS1"); 
+    exec("login /dev/pts/1"); 
 }
       
 int parent()
