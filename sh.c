@@ -131,6 +131,7 @@ main(int argc, char* argv)
 		{
 			getcwd(tmp); 
 			printf("%s\n", tmp); 
+			continue; 
 		}
 
 		// Handle IO redirection 

@@ -22,14 +22,31 @@ main(int argc, char *argv[])
 
   // 2. Now we can use printf, which calls putc(), which writes to stdout
   printf("GRIFFIN-init: fork a login task in the console\n"); 
+  printf("GRIFFIN-init: fork a login task in serial port 0\n"); 
+  printf("GRIFFIN-init: fork a login task in serial port 1\n"); 
+
   child = fork();
-  
+
   if (child)
+  {
+    /*s0 = fork(); 
+    if(s0)
+    {
+      s1 = fork();
+      if(!s1)
+        exec("login /dev/ttyS1"); 
+    }
+    else
+      exec("login /dev/ttyS0"); */ 
+
+
+    loginS0();
+
     parent();
+  }
   else  // fork a couple of login task 
   {
     login();    // fork a login task in the console 
-    loginS0();  // fork a login task in serial port 0 
   }
     
   
@@ -43,35 +60,47 @@ int login()
 
 int loginS0() // Run the login program in serial port 0 
 {
-  stdin = open("/dev/ttyS0", 0); 
-  stdout = open("/dev/ttyS0", 1); 
-  stderr = open("/dev/ttyS0", 1); 
-  printf("GRIFFIN-init: fork a login task in serial port 0\n"); 
+  stdin = open("/dev/ttyS0", 0);    // Open serial port 0 as stdin for READ
+  stdout = open("/dev/ttyS0", 1);   // Open serial port 0 as stdout for WRITE 
+  stderr = open("/dev/ttyS0", 1);   
+  
   s0 = fork(); 
 
   if(s0)
-    parent();
+  {
+    loginS1(); 
+    parent0();
+  }
   else
     exec("login /dev/ttyS0"); 
 }
 
 int loginS1() // Run the login program in serial port 1
 {
-  exec("login /dev/ttyS1"); 
+  stdin = open("/dev/ttyS1", 0);    // Open serial port 1 as stdin for READ  
+  stdout = open("/dev/ttyS1", 1);   // Open serial port 1 as stdout for WRITE   
+  stderr = open("/dev/ttyS1", 1);   
+  
+  s1 = fork(); 
+
+  if(s1)
+    parent1(); 
+  else
+    exec("login /dev/ttyS1"); 
 }
       
 int parent()
 {
   while(1){
-    printf("KCINIT : waiting .....\n");
+    //printf("GRIFFIN-init : waiting .....\n");
 
     pid = wait(&status);
 
     
     if (pid == child)
-      loginS0(); 
+      login(); 
     else
-      printf("INIT : buried an orphan child %d\n", pid);
+      printf("GRIFFIN-init : buried an orphan child %d\n", pid);
     
   }
 }
@@ -81,15 +110,32 @@ int parent()
 int parent0()
 {
   while(1){
-    printf("KCINIT : waiting .....\n");
+    //printf("GRIFFIN-init : waiting .....\n");
 
     pid = wait(&status);
 
     
-    if (pid == child)
+    if (pid == s0)
       loginS0(); 
     else
-        printf("INIT : buried an orphan child %d\n", pid);
+        printf("GRIFFIN-init : buried an orphan child %d\n", pid);
     
   }
 }
+
+int parent1()
+{
+  while(1){
+    //printf("GRIFFIN-init : waiting .....\n");
+
+    pid = wait(&status);
+
+    
+    if (pid == s1)
+      loginS1(); 
+    else
+      printf("GRIFFIN-init : buried an orphan child %d\n", pid);
+    
+  }
+}
+
