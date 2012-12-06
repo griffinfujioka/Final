@@ -21,29 +21,34 @@ ExecPipe(char *cmd1, char *cmd2)
 {
 	int status, pid;
 	int pd[2]; 
-	if(fork() == 0)
+	pid = fork(); 
+	if(pid == 0)
 	{
 		pipe(pd); 	// Create the pipe
 		printf("pd[0] = %d, pd[1] = %d\n", pd[0], pd[1]); 
 		// Fork a child for reading 
 		pid = fork(); 
+		printf("pid = P%d\n", pid); 
 		if(pid)
 		{
 			printf("P%d closing pd[1] to READ from pipe.\n", getpid()); 
-			close(pd[1]); 
-			close(0); 	// Replace stdin with the pipe reader 
-			dup(pd[0]); 
+			close(pd[1]); 				// Close second pipe descriptor 
+			close(0); 					// Replace stdin with the pipe reader 
+			printf("1\n"); 
+			dup(pd[0], pd[1]); 				// Duplicate first pipe descriptor 
 			printf("P%d ready to READ from pipe.\n", getpid()); 
-			exec(cmd2); 	// Execute the command 
+			exec(cmd2); 				// Execute the second command 
 			printf("%s failed to execute.\n", cmd2); 
 		}
 		else 
 		{
 			printf("parent P%d closing pd[0]\n", getpid()); 
-			close(pd[0]); 
-			close(1); 	// Replace stdout with the pipe writer 
-			dup(pd[1]); 
-			exec(cmd1); // Execute the command 
+			close(pd[0]); 				// Close the first pipe descriptor 
+			close(1); 					// Replace stdout with the pipe writer 
+			printf("1\n"); 
+			dup(pd[1], pd[0]); 				// Duplicate the second pipe descriptor 
+			printf("2\n"); 
+			exec(cmd1); 				// Execute the first command 
 			printf("%s failed to execute.\n", cmd1); 
 
 		}
@@ -61,8 +66,7 @@ ExecRedirect(char *execFile, char * redirect, char *file_mode)
 {
 	int pid, status; 
 
-	printf("ExecRedirect(%s, %s, 0x%x)\n", execFile, redirect, file_mode); 
-	sleep(1); // Take a nap  
+	printf("ExecRedirect(%s, %s, %x)\n", execFile, redirect, file_mode); 
 
 	pid = fork();
 	if(pid == 0)

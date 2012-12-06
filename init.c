@@ -23,34 +23,19 @@ main(int argc, char *argv[])
   // 2. Now we can use printf, which calls putc(), which writes to stdout
   printf("GRIFFIN-init: fork a login task in the console\n"); 
   printf("GRIFFIN-init: fork a login task in serial port 0\n"); 
-  printf("GRIFFIN-init: fork a login task in serial port 1\n"); 
+  //printf("GRIFFIN-init: fork a login task in serial port 1\n"); 
 
   child = fork();
 
   if (child)
   {
-    /*s0 = fork(); 
-    if(s0)
-    {
-      s1 = fork();
-      if(!s1)
-        exec("login /dev/ttyS1"); 
-    }
-    else
-      exec("login /dev/ttyS0"); */ 
-
-
     loginS0();
-
     parent();
   }
   else  // fork a couple of login task 
   {
     login();    // fork a login task in the console 
-  }
-    
-  
-  
+  }  
 }       
 
 int login()
