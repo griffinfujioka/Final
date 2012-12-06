@@ -2,7 +2,7 @@
 #include "StringHelpers.c"
 
 char line[64], buf[128]; 
-char *name[10]; 	// Hold 10 arguments from command line input delimited by ' '
+char *name[10]; 	// Hold 10 arguments from command line input delimited by separated by " "
 
 Menu()
 {
@@ -19,37 +19,39 @@ Menu()
 // Execute a pipe command 
 ExecPipe(char *cmd1, char *cmd2)
 {
-	int status, pid;
-	int pd[2]; 
+	int status, pid, ppid, r, n; 
+	int pd[2];
+	char pipe_line[256], *s = "griffin's data from pipe"; 
+	ppid = getpid(); 
+	printf("parent = P%d\n", ppid); 
 	pid = fork(); 
 	if(pid == 0)
 	{
-		pipe(pd); 	// Create the pipe
+		r = pipe(pd); 	// Create two pipes: pd[0] = READ, pd[1] = WRITE
 		printf("pd[0] = %d, pd[1] = %d\n", pd[0], pd[1]); 
 		// Fork a child for reading 
 		pid = fork(); 
 		printf("pid = P%d\n", pid); 
 		if(pid)
 		{
-			printf("P%d closing pd[1] to READ from pipe.\n", getpid()); 
+			// READER 
+			printf("child P%d close pd[1] to READ from pipe.\n", getpid()); 
 			close(pd[1]); 				// Close second pipe descriptor 
-			close(0); 					// Replace stdin with the pipe reader 
-			printf("1\n"); 
-			dup(pd[0], pd[1]); 				// Duplicate first pipe descriptor 
-			printf("P%d ready to READ from pipe.\n", getpid()); 
-			exec(cmd2); 				// Execute the second command 
-			printf("%s failed to execute.\n", cmd2); 
+			n = read(pd[0], pipe_line, 256); 
+			line[n] = 0; 
+			printf("%s\n", line); 
 		}
 		else 
 		{
+			// WRITER
 			printf("parent P%d closing pd[0]\n", getpid()); 
 			close(pd[0]); 				// Close the first pipe descriptor 
-			close(1); 					// Replace stdout with the pipe writer 
-			printf("1\n"); 
-			dup(pd[1], pd[0]); 				// Duplicate the second pipe descriptor 
-			printf("2\n"); 
-			exec(cmd1); 				// Execute the first command 
-			printf("%s failed to execute.\n", cmd1); 
+			while(1)
+			{
+				sleep(1); 
+				printf("child P%d writing pipe : %s\n", pid, s); 
+				write(pd[1], s, strlen(s)); 
+			}
 
 		}
 	}

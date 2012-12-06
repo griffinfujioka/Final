@@ -6,6 +6,7 @@
 //************************************************************************
 
 int pid, child, status, s0, s1;
+int s0status, s1status; 
 int s0in, s0out;  
 int stdin, stdout, stderr; 
 
@@ -26,13 +27,13 @@ main(int argc, char *argv[])
   //printf("GRIFFIN-init: fork a login task in serial port 1\n"); 
 
   child = fork();
-
-  if (child)
+  printf("init forked child process = P%d\n", child); 
+  if (child)  // Fork failed 
   {
-    loginS0();
-    parent();
+    loginS0();    // Fork a login task to serial port 0 
+    parent();     // Wait for task to die 
   }
-  else  // fork a couple of login task 
+  else    // Successful fork 
   {
     login();    // fork a login task in the console 
   }  
@@ -51,9 +52,9 @@ int loginS0() // Run the login program in serial port 0
   
   s0 = fork(); 
 
-  if(s0)
+  if(s0) // Fork failed 
   {
-    parent0();
+    parent0();   // Wait 
   }
   else
     exec("login /dev/ttyS0"); 
@@ -81,8 +82,8 @@ int parent()
     pid = wait(&status);
 
     
-    if (pid == child)
-      login(); 
+    if (pid == child)   // If the login task died
+      login();          // fork a new one I
     else
       printf("GRIFFIN-init : buried an orphan child %d\n", pid);
     
@@ -96,7 +97,7 @@ int parent0()
   while(1){
     //printf("GRIFFIN-init : waiting .....\n");
 
-    pid = wait(&status);
+    pid = wait(&s0status);
 
     
     if (pid == s0)
