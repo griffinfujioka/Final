@@ -16,7 +16,7 @@ main(int argc, char* argv[])
 		fd = open(argv[1], 0); 	// Open file for READ
 	}
 
-	if(!fd)
+	if(!fd)		// File did not open 
 	{
 		input = getc(); 
 		while(input != 4)	// While not Ctrl + D 
@@ -29,9 +29,9 @@ main(int argc, char* argv[])
 			input = getc(); 
 		}
 	}
-	else if(fd > 0)
+	else if(fd > 0)		// File opened successfully 	
 	{
-		n = read(fd, buf, 1024); 
+		n = read(fd, buf, 1024); 			// Read in 1024 bytes into buf 
 		while(n)
 		{
 			tmp = strtok(buf, "\n"); // Read line-by-line

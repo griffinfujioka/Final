@@ -30,7 +30,6 @@ main(int argc, char *argv[])
   printf("init forked child process = P%d\n", child); 
   if (child)  // Fork failed, you're still parent process
   {
-    loginS0();    // Fork a login task to serial port 0 
     parent();     // Wait for task to die 
   }
   else    // Successful fork 
@@ -89,10 +88,19 @@ int parent()
     //printf("GRIFFIN-init : waiting .....\n");
 
     pid = wait(&status);
-
     
     if (pid == child)   // If the login task died
-      login();          // fork a new one I
+    {
+      child = fork();   // Fork a new task 
+      if(child)   // Fork failed, keep waiting in parent 
+      {
+        parent();  
+      }
+      else        // Successful fork, execute a new login task 
+      {
+        login(); 
+      } 
+    }
     else
       printf("GRIFFIN-init : buried an orphan child %d\n", pid);
     

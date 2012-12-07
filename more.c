@@ -18,20 +18,20 @@ main(int argc, char* argv[])
 
 		while(n)		// while something was read in 
 		{
-			// Print the entire line 
+			// Print the entire contents of the buffer 
 			while(c < n && linenumber < 24)
 			{
 				if(buf[c] == '\n')
-					linenumber++; 	// When you reach the end of a line, move to the next one
+					linenumber++; 	// Keep track of what line number you're on 
 
-				putc(buf[c]); 
+				putc(buf[c]); 		// Print characters to the screen 1 by 1 
 				c++; 
 			}
 
-			if(c >= n) 		// You've reached the end of whatever was just read in. 
+			if(c >= n) 		// You've reached the end of the contents in the buffer 
 			{
 				c = 0; 		// Reset c to 0 
-				n = read(fd, buf,1024); 	// Try to read 1024 bytes from file into buf[] again
+				n = read(fd, buf,1024); 	// Do it all over again 
 			}
 
 			if(linenumber >= 24)

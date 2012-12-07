@@ -12,12 +12,39 @@ Menu()
 	printf("* ls     cd     pwd     cat     more   *\n"); 
 	printf("* cp     mv     >        >>     mkdir  *\n"); 
 	printf("* rmdir         creat    rm     chmod  *\n"); 
-	printf("* <      |      help     menu              *\n"); 
+	printf("* <      |      help     menu          *\n"); 
 	printf("****************************************\n"); 
 }
 
+ParsePipes(char *line)
+{
+	if((j = GetIndex(line, "|") != -1)) 	// Pipe handling 
+	{
+		line[j-1] = 0; 		// First part of pipe (Ex. 'cat filename\0')
+		ExecPipe(line, &line[j+2]); 	// &line[j+2] = second part of pipe (Ex. 'more\0')
+		continue; 
+	}
+	else
+	{
+		printf("ERROR: There are no more pipes contained in this line.\n"); 
+		pid = fork(); 	// Fork a child to exec to the command 
+		if(pid)
+		{
+			printf("parent sh waits for child to die\n"); 
+			pid = wait(&status); 	
+			printf("pid = %d\n"); 
+		}
+		else 
+		{
+			printf("forked task %d to exec %s\n", getpid(), words[0]); 
+			exec(line); 
+			printf("exec failed.\n"); 
+		}
+	}
+}
 
-// Execute a pipe command. Separate the pipe command into two parts
+// TODO: Break up pipe such that we are chopping off one portion of the pipe from the end of the line at a time. 
+// Execute a pipe command. Separate the pipe command into a left side and a right side 
 ExecPipe(char *cmd1, char *cmd2)
 {
 	int status, pid, ppid, r, n; 
@@ -34,16 +61,23 @@ ExecPipe(char *cmd1, char *cmd2)
 	// Fork a child for reading 
 	pid = fork(); 
 	printf("pid = P%d\n", pid); 
-	if(pid)  	// Fork failed, parent proc is reader
+	if(!pid)  	// Fork failed, parent proc is reader and will take care of one part of pipe 
 	{
 		// READER 
 		printf("child P%d close pd[1] to READ from pipe.\n", getpid()); 
 		close(pd[1]); 				// Close writer 
 		close(0); 					// Close stdin 
 		dup2(pd[0], 0); 			// Open reader for READ
+		while(1)
+		{
+			printf("child P%d reading pipe", getpid()); 
+			n = read(pd[0],pipe_line, 256); 
+			line[n] = 0; 
+			printf("%s\n", line); 
+		}
 		exec(cmd2); 
 	}
-	else 	// Fork successful, child proc is writer 
+	else 	// Fork successful, child proc is writer and will take care of a different part of pipe command 
 	{
 		// WRITER
 		printf("parent P%d closing pd[0]\n", getpid()); 
@@ -52,9 +86,12 @@ ExecPipe(char *cmd1, char *cmd2)
 		close(1); 					// Close stdout
 		printf("2\n"); 
 		dup2(pd[1], 1); 			// Open writer for writing 
+		while(1)
+		{
+			printf("parent %d writing to pipe %s\n", pid, s); 
+			write(pd[1], s, strlen(s)); 
+		}
 		printf("3\n"); 
-		strncpy(temp_line, cmd1, strlen(cmd1)); 
-		printf("temp_line = %s\n", temp_line); 
 		exec(cmd1); 
 		
 	}
@@ -126,7 +163,7 @@ main(int argc, char* argv)
 		}
 		else if(strcmp(words[0], "logout") == 0)
 		{
-			exit(0); 
+			exit(0); 		// Kill the login task 
 		}
 		else if(strcmp(words[0], "cd") == 0)
 		{
@@ -157,7 +194,7 @@ main(int argc, char* argv)
 		if((j = GetIndex(line, "|") != -1)) 	// Pipe handling 
 		{
 			line[j-1] = 0; 		// First part of pipe (Ex. 'cat filename\0')
-			ExecPipe(&line[j+2]); 	// &line[j+2] = second part of pipe (Ex. 'more\0')
+			ExecPipe(line, &line[j+2]); 	// &line[j+2] = second part of pipe (Ex. 'more\0')
 			continue; 
 		}
 		else if((j = GetIndex(line, ">>")) != -1) 	// Append handling 

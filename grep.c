@@ -95,7 +95,7 @@ main(int argc, char* argv[])
 
 			if(c >= n)
 			{
-				c = 0; 
+				c = 0; 				// Reset everything and go at it again 
 				j = 0; 
 				n = read(fd, buf, 1024); 
 			}

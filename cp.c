@@ -23,9 +23,9 @@ main(int argc, char* argv[])
 	while(n)
 	{
 		printf("Read %d bytes from source.\n", n); 
-		write(fd2, buf, n); 
+		write(fd2, buf, n); 		// Write to destination file 
 		printf("Wrote %d bytes to destination.\n", n); 
-		n = read(fd1, buf, 1024); 
+		n = read(fd1, buf, 1024); 	// Read from source file 
 	}
 
 }
