@@ -54,7 +54,7 @@ int loginS0() // Run the login program in serial port 0
 
   if(s0) // Fork failed 
   {
-    loginS1(); 
+    //loginS1(); 
     parent0();   // Wait 
   }
   else

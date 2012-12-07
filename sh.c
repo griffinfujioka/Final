@@ -2,7 +2,7 @@
 #include "StringHelpers.c"
 
 char line[64], buf[128]; 
-char *name[10]; 	// Hold 10 arguments from command line input delimited by separated by " "
+char *words[16]; 	// Hold 16 arguments from command line input delimited by separated by " "
 
 Menu()
 {
@@ -12,7 +12,7 @@ Menu()
 	printf("* ls     cd     pwd     cat     more   *\n"); 
 	printf("* cp     mv     >        >>     mkdir  *\n"); 
 	printf("* rmdir         creat    rm     chmod  *\n"); 
-	printf("* <      |      help                   *\n"); 
+	printf("* <      |      help     menu              *\n"); 
 	printf("****************************************\n"); 
 }
 
@@ -20,41 +20,44 @@ Menu()
 ExecPipe(char *cmd1, char *cmd2)
 {
 	int status, pid, ppid, r, n; 
+	int j; 
 	int pd[2];
 	char pipe_line[256], *s = "griffin's data from pipe"; 
+	char temp_line[64]; 
+
 	ppid = getpid(); 
 	printf("parent = P%d\n", ppid); 
-	r = pipe(pd); 	// Create two pipes: pd[0] = READ, pd[1] = WRITE
+	pipe(pd); 	// Create two pipes: pd[0] = READ, pd[1] = WRITE
+	printf("pd[0] = %d, pd[1] = %d\n", pd[0], pd[1]);
+
+	// Fork a child for reading 
 	pid = fork(); 
-	if(pid == 0)
+	printf("pid = P%d\n", pid); 
+	if(pid)  	// Fork failed, parent proc is reader
 	{
-		printf("pd[0] = %d, pd[1] = %d\n", pd[0], pd[1]); 
-		// Fork a child for reading 
-		pid = fork(); 
-		printf("pid = P%d\n", pid); 
-		if(pid)
-		{
-			// READER 
-			printf("child P%d close pd[1] to READ from pipe.\n", getpid()); 
-			close(pd[1]); 				// Close second pipe descriptor 
-			close(0); 
-			dup2(pd[0], 0); 			// Open second pipe descriptor for READ
-			exec(cmd2); 
-		}
-		else 
-		{
-			// WRITER
-			printf("parent P%d closing pd[0]\n", getpid()); 
-			close(pd[0]); 				// Close the first pipe descriptor 
-			close(1); 
-			dup2(pd[1], 1); 
-			exec(cmd1); 
-		}
+		// READER 
+		printf("child P%d close pd[1] to READ from pipe.\n", getpid()); 
+		close(pd[1]); 				// Close writer 
+		close(0); 					// Close stdin 
+		dup2(pd[0], 0); 			// Open reader for READ
+		exec(cmd2); 
 	}
-	else
+	else 	// Fork successful, child proc is writer 
 	{
-		// Wait for child to die 
-		wait(&status); 
+		// WRITER
+		printf("parent P%d closing pd[0]\n", getpid()); 
+		close(pd[0]); 				// Close reader
+		close(1); 					// Close stdout
+		dup2(pd[1], 1); 			// Open writer for writing 
+		strncpy(temp_line, cmd1, strlen(cmd1)); 
+		printf("temp_line = %s\n", temp_line); 
+		exec(cmd1); 
+		/*if((j = GetIndex(&temp_line, "|") != -1)) 	// If there are more pipes left 
+		{
+			line[j-1] = 0; 		// Delimit left side of pipe with null terminator 
+			ParsePipe(cmd1); 
+		}*/ 
+		
 	}
 
 }
@@ -67,7 +70,7 @@ ExecRedirect(char *execFile, char * redirect, char *file_mode)
 	printf("ExecRedirect(%s, %s, %x)\n", execFile, redirect, file_mode); 
 
 	pid = fork();
-	if(pid == 0)
+	if(pid == 0) 	// Successful fork 
 	{
 		// Setup IO redirection so output is written to file 
 		close(1); 	//  Replace stdout with the file 
@@ -77,7 +80,6 @@ ExecRedirect(char *execFile, char * redirect, char *file_mode)
 			exit(-1); 
 		}
 		exec(execFile); 
-		printf("ERROR: exec %s failed.\n", execFile); 
 	}
 	else
 	{
@@ -89,7 +91,9 @@ main(int argc, char* argv)
 {
 	//int stdin, stdout, stderr; 
 	int i, j, pid, cid, me, status; 
-	char tmp[64]; 
+	char tmp_line[64]; 
+
+	printf("***** Griffin's shell ******\n"); 
 
 	me = getpid(); 
 	while(1)
@@ -99,54 +103,59 @@ main(int argc, char* argv)
 		if(line[0] == 0)
 			continue; 
 
-		strcpy(tmp, line);  // Copy user input into tmp so we can tokenize it
+		strcpy(tmp_line, line);  // Copy user input into tmp so we can tokenize it
 		
-		// Tokenize the input line and put each word into name[0], name[1]... 
+		// Tokenize the input line and put each word into words[0], words[1]... 
 		i = 0; 
-		name[i] = strtok(tmp, " \n");  	// name[0] = command 
-		while(i < 9)
+		words[i] = strtok(tmp_line, " \n");  	// words[0] = command (i.e., cd, less, cat, etc.)
+		while(i < 15)
 		{
 			i++; 
-			name[i] = strtok(0, " \n"); // name[1-9] = parameters 
+			words[i] = strtok(0, " \n"); // words[1-15] = arguments (i.e., -l, directory, filename, etc.)
 		}
 
 		// Handle special cases first: help, logout, cd and pwd 
-		// cd and pwd must be handeled because they are system calls and not user programs like
+		// cd and pwd must be handled specially because they are system calls and not user programs like
 		// the others we wrote for this assignment (cp, grep, cat, more, etc.)
-		if(strcmp(name[0], "help") == 0)
+		if(strcmp(words[0], "help") == 0 || strcmp(words[0], "menu") == 0)
 		{
 			Menu(); 
 			continue; 
 		}
-		else if(strcmp(name[0], "logout") == 0)
+		else if(strcmp(words[0], "logout") == 0)
 		{
 			exit(0); 
 		}
-		else if(strcmp(name[0], "cd") == 0)
+		else if(strcmp(words[0], "cd") == 0)
 		{
-			chdir(name[1]); 
-			getcwd(line); 
-			printf("cd to %s\n", line); 
+			if(words[1] == 0) 
+				chdir("/"); 		// Go back to root
+			else
+				chdir(words[1]); 
+			
+			getcwd(line); 			// Load cwd into line[] buffer
+			printf("cd to %s\n", line); 	// Print cwd
 			continue; 
 		}
-		else if(strcmp(name[0], "pwd") == 0)
+		else if(strcmp(words[0], "pwd") == 0)
 		{
-			getcwd(tmp); 
-			printf("%s\n", tmp); 
+			getcwd(tmp_line); 
+			printf("%s\n", tmp_line); 
 			continue; 
 		}
 
 		// Handle IO redirection 
-		if(StringContains(line, ">") && StringContains(line, "|"))
+		/*if((StringContains(line, ">")) && (StringContains(line, "|")))
 		{
 			printf("ERROR: Pipe and redirection is not supported within the same command.\n"); 
 			continue; 
-		}
+		}*/ 
 
 		if(CountOccurences(line, "|") > 1)
 		{
 			// Multiple pipes
-			printf("ERROR: Support for multiple pipes is not included in this build.\n"); 
+			//ExecPipe(0, strlen(line)); 
+			printf("ERROR: This build does not support multiple pipes.\n"); 
 			continue; 
 		}
 
@@ -245,7 +254,7 @@ main(int argc, char* argv)
 		}
 		else 
 		{
-			printf("forked task %d to exec %s\n", getpid(), name[0]); 
+			printf("forked task %d to exec %s\n", getpid(), words[0]); 
 			exec(line); 
 			printf("exec failed.\n"); 
 		}
