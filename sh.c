@@ -16,7 +16,8 @@ Menu()
 	printf("****************************************\n"); 
 }
 
-// Execute a pipe command 
+
+// Execute a pipe command. Separate the pipe command into two parts
 ExecPipe(char *cmd1, char *cmd2)
 {
 	int status, pid, ppid, r, n; 
@@ -47,20 +48,19 @@ ExecPipe(char *cmd1, char *cmd2)
 		// WRITER
 		printf("parent P%d closing pd[0]\n", getpid()); 
 		close(pd[0]); 				// Close reader
+		printf("1\n"); 
 		close(1); 					// Close stdout
+		printf("2\n"); 
 		dup2(pd[1], 1); 			// Open writer for writing 
+		printf("3\n"); 
 		strncpy(temp_line, cmd1, strlen(cmd1)); 
 		printf("temp_line = %s\n", temp_line); 
 		exec(cmd1); 
-		/*if((j = GetIndex(&temp_line, "|") != -1)) 	// If there are more pipes left 
-		{
-			line[j-1] = 0; 		// Delimit left side of pipe with null terminator 
-			ParsePipe(cmd1); 
-		}*/ 
 		
 	}
 
 }
+
 
 // Execute a redirection command 
 ExecRedirect(char *execFile, char * redirect, char *file_mode)
@@ -90,7 +90,8 @@ ExecRedirect(char *execFile, char * redirect, char *file_mode)
 main(int argc, char* argv)
 {
 	//int stdin, stdout, stderr; 
-	int i, j, pid, cid, me, status; 
+	int i, j, pid, cid, me, status;
+	int tokc = 0; 
 	char tmp_line[64]; 
 
 	printf("***** Griffin's shell ******\n"); 
@@ -111,6 +112,7 @@ main(int argc, char* argv)
 		while(i < 15)
 		{
 			i++; 
+			tokc++; 
 			words[i] = strtok(0, " \n"); // words[1-15] = arguments (i.e., -l, directory, filename, etc.)
 		}
 
@@ -143,14 +145,7 @@ main(int argc, char* argv)
 			printf("%s\n", tmp_line); 
 			continue; 
 		}
-
-		// Handle IO redirection 
-		/*if((StringContains(line, ">")) && (StringContains(line, "|")))
-		{
-			printf("ERROR: Pipe and redirection is not supported within the same command.\n"); 
-			continue; 
-		}*/ 
-
+		
 		if(CountOccurences(line, "|") > 1)
 		{
 			// Multiple pipes
@@ -162,7 +157,7 @@ main(int argc, char* argv)
 		if((j = GetIndex(line, "|") != -1)) 	// Pipe handling 
 		{
 			line[j-1] = 0; 		// First part of pipe (Ex. 'cat filename\0')
-			ExecPipe(line, &line[j+2]); 	// &line[j+2] = second part of pipe (Ex. 'more\0')
+			ExecPipe(&line[j+2]); 	// &line[j+2] = second part of pipe (Ex. 'more\0')
 			continue; 
 		}
 		else if((j = GetIndex(line, ">>")) != -1) 	// Append handling 
@@ -258,5 +253,6 @@ main(int argc, char* argv)
 			exec(line); 
 			printf("exec failed.\n"); 
 		}
+		
 	}
 }
