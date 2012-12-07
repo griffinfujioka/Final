@@ -24,10 +24,10 @@ ExecPipe(char *cmd1, char *cmd2)
 	char pipe_line[256], *s = "griffin's data from pipe"; 
 	ppid = getpid(); 
 	printf("parent = P%d\n", ppid); 
+	r = pipe(pd); 	// Create two pipes: pd[0] = READ, pd[1] = WRITE
 	pid = fork(); 
 	if(pid == 0)
 	{
-		r = pipe(pd); 	// Create two pipes: pd[0] = READ, pd[1] = WRITE
 		printf("pd[0] = %d, pd[1] = %d\n", pd[0], pd[1]); 
 		// Fork a child for reading 
 		pid = fork(); 
@@ -37,22 +37,18 @@ ExecPipe(char *cmd1, char *cmd2)
 			// READER 
 			printf("child P%d close pd[1] to READ from pipe.\n", getpid()); 
 			close(pd[1]); 				// Close second pipe descriptor 
-			n = read(pd[0], pipe_line, 256); 
-			line[n] = 0; 
-			printf("%s\n", line); 
+			close(0); 
+			dup2(pd[0], 0); 			// Open second pipe descriptor for READ
+			exec(cmd2); 
 		}
 		else 
 		{
 			// WRITER
 			printf("parent P%d closing pd[0]\n", getpid()); 
 			close(pd[0]); 				// Close the first pipe descriptor 
-			while(1)
-			{
-				sleep(1); 
-				printf("child P%d writing pipe : %s\n", pid, s); 
-				write(pd[1], s, strlen(s)); 
-			}
-
+			close(1); 
+			dup2(pd[1], 1); 
+			exec(cmd1); 
 		}
 	}
 	else

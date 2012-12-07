@@ -28,7 +28,7 @@ main(int argc, char *argv[])
 
   child = fork();
   printf("init forked child process = P%d\n", child); 
-  if (child)  // Fork failed 
+  if (child)  // Fork failed, you're still parent process
   {
     loginS0();    // Fork a login task to serial port 0 
     parent();     // Wait for task to die 
@@ -54,6 +54,7 @@ int loginS0() // Run the login program in serial port 0
 
   if(s0) // Fork failed 
   {
+    loginS1(); 
     parent0();   // Wait 
   }
   else
@@ -62,16 +63,24 @@ int loginS0() // Run the login program in serial port 0
 
 int loginS1() // Run the login program in serial port 1
 {
-  stdin = open("/dev/pts/1", 0);    // Open serial port 1 as stdin for READ  
-  stdout = open("/dev/pts/1", 1);   // Open serial port 1 as stdout for WRITE   
-  stderr = open("/dev/pts/1", 1);   
+  stdin = open("/dev/ttyS1", 0);    // Open serial port 1 as stdin for READ  
+  stdout = open("/dev/ttyS1", 1);   // Open serial port 1 as stdout for WRITE   
+  stderr = open("/dev/ttyS1", 1);   
+  //printf("Entered loginS1() to fork login task to serial port 1\n"); 
   
   s1 = fork(); 
 
   if(s1)
+  {
+    //printf("fork() failed to create new process to execute login task in serial port 1\n"); 
     parent1(); 
+  } 
   else
-    exec("login /dev/pts/1"); 
+  {
+    //printf("forked() child P%d to execute login task in serial port 1\n", getpid()); 
+    exec("login /dev/ttyS1"); 
+  }
+    
 }
       
 int parent()
@@ -97,7 +106,7 @@ int parent0()
   while(1){
     //printf("GRIFFIN-init : waiting .....\n");
 
-    pid = wait(&s0status);
+    pid = wait(&status);
 
     
     if (pid == s0)
