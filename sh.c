@@ -18,15 +18,15 @@ Menu()
 
 ParsePipes(char *line)
 {
+	int j, status; 
 	if((j = GetIndex(line, "|") != -1)) 	// Pipe handling 
 	{
 		line[j-1] = 0; 		// First part of pipe (Ex. 'cat filename\0')
 		ExecPipe(line, &line[j+2]); 	// &line[j+2] = second part of pipe (Ex. 'more\0')
-		continue; 
 	}
 	else
 	{
-		printf("ERROR: There are no more pipes contained in this line.\n"); 
+		printf("There are NO more pipes contained in this line.\n"); 
 		pid = fork(); 	// Fork a child to exec to the command 
 		if(pid)
 		{
@@ -52,6 +52,7 @@ ExecPipe(char *cmd1, char *cmd2)
 	int pd[2];
 	char pipe_line[256], *s = "griffin's data from pipe"; 
 	char temp_line[64]; 
+	printf("pipe - cmd1 = %s, cmd2 = %s\n", cmd1, cmd2); 
 
 	ppid = getpid(); 
 	printf("parent = P%d\n", ppid); 
@@ -61,20 +62,13 @@ ExecPipe(char *cmd1, char *cmd2)
 	// Fork a child for reading 
 	pid = fork(); 
 	printf("pid = P%d\n", pid); 
-	if(!pid)  	// Fork failed, parent proc is reader and will take care of one part of pipe 
+	if(pid == 0)  	// Fork failed, parent proc is reader and will take care of one part of pipe 
 	{
 		// READER 
 		printf("child P%d close pd[1] to READ from pipe.\n", getpid()); 
 		close(pd[1]); 				// Close writer 
 		close(0); 					// Close stdin 
 		dup2(pd[0], 0); 			// Open reader for READ
-		while(1)
-		{
-			printf("child P%d reading pipe", getpid()); 
-			n = read(pd[0],pipe_line, 256); 
-			line[n] = 0; 
-			printf("%s\n", line); 
-		}
 		exec(cmd2); 
 	}
 	else 	// Fork successful, child proc is writer and will take care of a different part of pipe command 
@@ -82,18 +76,9 @@ ExecPipe(char *cmd1, char *cmd2)
 		// WRITER
 		printf("parent P%d closing pd[0]\n", getpid()); 
 		close(pd[0]); 				// Close reader
-		printf("1\n"); 
 		close(1); 					// Close stdout
-		printf("2\n"); 
 		dup2(pd[1], 1); 			// Open writer for writing 
-		while(1)
-		{
-			printf("parent %d writing to pipe %s\n", pid, s); 
-			write(pd[1], s, strlen(s)); 
-		}
-		printf("3\n"); 
 		exec(cmd1); 
-		
 	}
 
 }
@@ -193,8 +178,9 @@ main(int argc, char* argv)
 
 		if((j = GetIndex(line, "|") != -1)) 	// Pipe handling 
 		{
+			printf("In pipe handling: line = %s\n", line); 
 			line[j-1] = 0; 		// First part of pipe (Ex. 'cat filename\0')
-			ExecPipe(line, &line[j+2]); 	// &line[j+2] = second part of pipe (Ex. 'more\0')
+			ExecPipe(&line, &line[j+2]); 	// &line[j+2] = second part of pipe (Ex. 'more\0')
 			continue; 
 		}
 		else if((j = GetIndex(line, ">>")) != -1) 	// Append handling 
